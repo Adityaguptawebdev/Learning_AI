@@ -30,18 +30,22 @@ else:
 ```
 ⚠️ The **spaces at the start of a line** (indentation) matter in Python. They show which lines belong to the `if`.
 
+> 💬 **Hinglish:** Line ke aage jo space hai, wahi batata hai ki ye line `if` ke andar hai. Space galat hua to error aayega.
+
 ## 5. List (many items, in order)
 ```python
 fruits = ["apple", "mango"]
 fruits.append("banana")       # add item
 print(fruits[0])              # first item -> apple (counting starts at 0)
 ```
+> 💬 **Hinglish:** Python mein ginti 0 se shuru hoti hai, 1 se nahi. Pehla item `[0]`, doosra `[1]`.
 
 ## 6. Dictionary (key → value)
 ```python
 person = {"name": "Aditya", "age": 22}
 print(person["name"])         # -> Aditya
 ```
+> 💬 **Hinglish:** Dictionary ek dabba hai jisme har cheez ka ek naam (key) hai. Naam bolo, value mil jaayegi.
 💡 Our AI messages are **a list of dictionaries**:
 ```python
 messages = [{"role": "user", "content": "Hi"}]
@@ -62,6 +66,7 @@ while True:                   # forever...
     if text == "exit":
         break                 # ...until break
 ```
+> 💬 **Hinglish:** `for` = list ke har item ke liye ek baar chalo. `while True` = hamesha chalte raho, jab tak `break` na aaye.
 
 ## 8. Functions (reusable block of code)
 ```python
@@ -70,6 +75,7 @@ def greet(name):
 
 print(greet("Aditya"))
 ```
+> 💬 **Hinglish:** Function ek machine hai. Andar kuch daalo (`name`), wo kaam karke result `return` kar deti hai.
 
 ## 9. Import (use code someone else wrote)
 ```python
@@ -82,3 +88,4 @@ from openai import OpenAI     # installed with pip
 response.choices[0].message.content
 # response -> choices list -> first item -> message -> content (the text)
 ```
+> 💬 **Hinglish:** Dot `.` matlab "iske andar jao". Jaise dabba ke andar dabba, aur sabse andar wale mein AI ka jawab hai.

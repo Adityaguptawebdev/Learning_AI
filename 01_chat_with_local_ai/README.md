@@ -9,6 +9,7 @@ flowchart LR
     C -- response --> B
     B --> E["🖥️ Printed answer"]
 ```
+> 💬 **Hinglish:** Ollama aapke laptop pe chalne wala ek chhota server hai. Python usse sawal bhejta hai, Ollama model se jawab lekar wapas deta hai. Sab kuch laptop pe hi hota hai, internet nahi chahiye.
 
 ## Setup (once)
 ```bash
@@ -38,6 +39,8 @@ Send one fixed prompt, print the reply.
 4. Print `response.choices[0].message.content`
 
 **messages** = list of `{"role": "user", "content": "your text"}`
+
+> 💬 **Hinglish:** Hum `openai` library use kar rahe hain, par baat Ollama se ho rahi hai, kyunki Ollama bhi wahi format samajhta hai. `base_url` batata hai ki request kahan bhejni hai. `role: "user"` ka matlab hai "ye message maine bheja hai".
 
 ## Step 2: User input → [step2_ask_ai.py](step2_ask_ai.py)
 Type your own question:
@@ -70,11 +73,15 @@ os.getenv("MODEL_NAME")        # get one value
 - `.env` = real values, **never upload** (in `.gitignore`)
 - `.env.example` = safe sample → `cp .env.example .env`
 
+> 💬 **Hinglish:** `.env` ek settings ki diary hai. Code mein seedha URL ya key likhne ki jagah yahan likhte hain, taaki secret cheezein GitHub pe upload na ho.
+
 **Problem 🤔** AI has no memory:
 ```
 You: My name is Aditya
 You: What is my name?   → doesn't know!
 ```
+> 💬 **Hinglish:** Har baar hum sirf naya message bhejte hain, purani baatein nahi. Isliye AI ko kuch yaad nahi rehta.
+
 → Fixed in Step 4.
 
 ---
