@@ -1,6 +1,6 @@
 # 00 - Python Basics
 
-Only what we need for the AI code. Try each example in the terminal: type `python3`, paste, press Enter. Type `exit()` to leave.
+Only what we need for the AI code. Everything here is used in [01 - Chat with Local AI](../01_chat_with_local_ai/). Try each example in the terminal: type `python3`, paste, press Enter. Type `exit()` to leave.
 
 ## 1. Print
 ```python
