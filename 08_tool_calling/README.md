@@ -124,6 +124,8 @@ Naya role: **`tool`** = "ye function ka result hai". `tool_call_id` batata hai k
 
 `llama3.2:3b` ko tools diye jaayein to woh **har sawal pe** tool call kar deta hai. Clear description aur system prompt dono try kiye, phir bhi fark nahi pada. Final jawab phir bhi sahi aaya, kyunki model bekaar result ignore kar deta hai. Par extra time aur extra call lagti hai.
 
+🔍 **Asli wajah (Chapter 02 mein mili):** Ollama ka llama3.2 template, tools milte hi model ko bolta hai *"please respond with a JSON for a function call"*. Yaani model ko pehle se hi tool call karne ka hukm mil jaata hai. Dekho [02 - Step 1, hidden tokens](../02_how_llms_work/README.md).
+
 **Lesson:** "Kaunsa tool kab chalana hai" ye decide karna mushkil kaam hai. **Bade models** (`qwen2.5:7b`, `llama3.1:8b`, GPT, Claude) ye bahut better karte hain. Real projects mein tool-calling ke liye model soch-samajh ke chuno.
 
 ### 🌍 Real world
