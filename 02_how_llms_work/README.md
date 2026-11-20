@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    S1["Step 1<br/>Tokens"] -->|"agla token kaise chunta hai?"| S2["Step 2<br/>Next-token prediction ⏳"]
+    S1["Step 1<br/>Tokens"] -->|"agla token kaise chunta hai?"| S2["Step 2<br/>Next-token prediction"]
     S2 -->|"har baar alag jawab kyun?"| S3["Step 3<br/>Temperature ⏳"]
     S3 -->|"confident hoke galat kyun?"| S4["Step 4<br/>Hallucination ⏳"]
 ```
@@ -94,8 +94,91 @@ python 02_how_llms_work/step1_tokens.py
 
 ---
 
-## Step 2: Next-token prediction ⏳
-LLM har token ke liye **probability** nikaalta hai ("Paris" 92%, "the" 1%...). Training, parameters (3b), aur attention ka simple idea.
+## Step 2: Next-token prediction → [step2_next_token.py](step2_next_token.py)
+🔗 **Step 1 se aage:** LLM tokens padhta hai. Ab dekhte hain ki woh **agla token kaise chunta hai**.
+
+### 🧠 Concept: LLM sirf ek kaam karta hai
+**"Ab tak ke tokens dekh ke, agla token kya hoga?"** Bas yahi. Har possible token (1.28 lakh blocks) ke liye woh ek **probability (chance %)** nikaalta hai, phir ek token chun leta hai.
+
+Poora jawab isi ek kaam ko **baar-baar** karke banta hai. Har chuna hua token input mein jud jaata hai, aur phir agla token predict hota hai:
+```mermaid
+flowchart LR
+    A["Python is a"] --> P1{"🧠 predict"} --> T1["general"]
+    T1 --> B["Python is a general"] --> P2{"🧠 predict"} --> T2["-purpose"]
+    T2 --> C["... general-purpose"] --> P3{"🧠 predict"} --> T3["programming"]
+    T3 --> D["... jab tak 'stop' token na aaye"]
+```
+> 💬 **Hinglish:** LLM ek bahut tez **autocomplete** hai. Woh poora jawab pehle se "soch" ke nahi likhta. Ek-ek token likhta hai, aur har token ke baad sochta hai ki "ab aage kya aayega?". Isliye streaming (01 Step 6) mein jawab tukdon mein aata hai.
+
+### 🔍 Part A: ek token ke options
+`"The capital of France is"` ke baad:
+```
+'Paris'       99.91%  ███████████████████
+'Par'          0.06%
+' Paris'       0.01%
+'PAR'          0.00%
+'France'       0.00%
+```
+Model **99.91% sure** hai. Jab fact training data mein bahut baar aaya ho, to probability ek token pe concentrate ho jaati hai.
+
+### 🔍 Part B: poora jawab = bahut saare choices
+`"Python is a"` ke baad, har step pe top 3 options:
+```
+chosen 'general'        | options: 'high' 51%, 'programming' 14%, 'general' 10%
+chosen '-purpose'       | options: '-purpose' 99%, ' purpose' 1%, ...
+chosen ' programming'   | options: ' programming' 97%, ' language' 2%, ...
+chosen ' language'      | options: ' language' 100%, ...
+chosen '.'              | options: '.' 98%, ...
+```
+😮 **Pehle step pe model ne `'general'` (sirf 10%) chuna, jabki `'high'` 51% tha!**
+- Model hamesha top wala token nahi chunta. Woh probability ke hisaab se **random draw** karta hai: 51% wala zyada baar aayega, par 10% wala bhi kabhi-kabhi aa jaata hai.
+- Ek baar `'general'` chun liya, to aage ke tokens 97-100% sure ho gaye (`-purpose` → `programming` → `language`). Shuru ka ek choice poore jawab ki direction badal deta hai.
+- Isi wajah se **same sawal pe har baar alag jawab** aata hai. Ye control kaise karte hain → Step 3 (Temperature)
+
+### 🏋️ Ye probabilities aati kahan se hain? Training
+| | **Training** (seekhna) | **Inference** (use karna) |
+|---|---|---|
+| Kya hota hai | Model internet ka text padhta hai aur har jagah "agla token" guess karta hai. Galat hua to khud ko thoda sudhaarta hai. Ye arabon baar hota hai. | Seekhe hue model se jawab nikalna. **Hum yahi kar rahe hain** |
+| Kitna data | Llama 3: ~15 trillion tokens | Bas tumhara prompt |
+| Kharcha | Hazaaron GPUs, mahine, crores ₹ | Tumhara laptop, seconds |
+| Kab | Ek baar (Meta ne kiya) | Har request pe |
+
+**Parameters** = model ke andar ke numbers ("knobs" 🎛️), jo training mein set hote hain. Inhi mein model ki saari "knowledge" hai.
+- `llama3.2:3b` = **3 billion** knobs (~2 GB)
+- Bade models: 70b, 400b+. Zyada parameters = zyada patterns yaad = usually smart, par zyada RAM aur slow
+
+> 💬 **Hinglish:** Training = 12 saal school jaana (mehenga, lamba, ek baar). Inference = exam mein jawab likhna (fast, baar-baar). Parameters = dimaag mein jo yaad hai.
+
+### 👀 Attention: LLM context kaise samajhta hai (simple idea)
+Agla token predict karte waqt model **pichle saare tokens ko dekhta hai**, aur decide karta hai ki kaun se tokens **zyada important** hain.
+
+*"Aditya ne Rahul ko phone kiya kyunki **woh** bore ho raha tha"*. Yahan "woh" predict/samajhne ke liye model "Aditya" pe zyada **dhyan (attention)** deta hai.
+
+Is technique ko **Attention** kehte hain, aur jo model ise use karte hain unhe **Transformer** kehte hain. GPT ka "T" = Transformer. (2017 ka paper *"Attention Is All You Need"*.)
+
+### 📝 Code
+```python
+logprobs=True,      # server, probabilities bhi bhejo
+top_logprobs=5,     # top 5 options dikhao
+
+math.exp(logprob) * 100    # logprob → percent
+```
+- **logprob** = probability ka "log" roop (computer ke liye convenient). `math.exp()` use normal chance bana deta hai. Bas itna yaad rakho: `logprob` 0 ke jitna paas, utna sure (`-0.001` ≈ 99.9%).
+- `f"{percent:6.2f}%"` = **f-string**: number ko 2 decimal tak format karke text mein daalna.
+
+### 🌍 Real world
+- **Phone keyboard ke next-word suggestions**: same idea, bahut chhota model
+- **Gmail Smart Compose, GitHub Copilot**: gray text mein aage ka suggestion = next-token prediction
+- **Confidence check**: kuch companies logprobs dekh ke pata lagati hain ki model kitna sure hai. Kam probability = "ye jawab double-check karo"
+
+### 🧪 Khud try karo
+```bash
+python 02_how_llms_work/step2_next_token.py
+```
+- 2-3 baar chalao: Part A har baar same (99.91% Paris), par Part B mein chosen tokens badal sakte hain
+- Part A ka prompt badlo: `"My favourite colour is"`. Ab probabilities kaafi bikhri hongi (koi ek sahi jawab nahi hai)
+
+**Problem 🤔** Model kabhi top token chunta hai, kabhi 10% wala. Ye **randomness kaun control karta hai?** Kya hum use kam-zyada kar sakte hain? → Step 3
 
 ## Step 3: Temperature ⏳
 Same sawal pe har baar alag jawab kyun? Creative vs fixed jawab.
@@ -103,6 +186,5 @@ Same sawal pe har baar alag jawab kyun? Creative vs fixed jawab.
 ## Step 4: Hallucination ⏳
 LLM confident hoke galat kyun bolta hai, aur isse kaise bachein.
 
-### 🌍 Real world (chapter preview)
-- Phone keyboard ka next-word suggestion isi idea ka chhota version hai
+### 🌍 Real world (preview)
 - 2023 mein US ke kuch lawyers ne ChatGPT ke banaye **fake court cases** court mein submit kar diye (hallucination!)
