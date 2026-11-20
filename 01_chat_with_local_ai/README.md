@@ -8,7 +8,7 @@ flowchart LR
     S2 -->|"only 1 question"| S3["Step 3<br/>Chat loop"]
     S3 -->|"AI forgets"| S4["Step 4<br/>Memory"]
     S4 -->|"no personality"| S5["Step 5<br/>System prompt"]
-    S5 -->|"reply comes late, all at once"| S6["Step 6<br/>Streaming ⏳"]
+    S5 -->|"reply comes late, all at once"| S6["Step 6<br/>Streaming"]
 ```
 
 ## Setup (once)
@@ -232,7 +232,110 @@ Baaki code (loop + memory) bilkul Step 4 jaisa hai. `"""...."""` = Python mein m
 
 ---
 
+## Step 6: Streaming → [step6_streaming.py](step6_streaming.py)
+🔗 **Step 5 ki problem fix:** jawab ek saath nahi, **tukdon mein** aata hai aur turant screen pe dikhta hai.
+
+### Concept: streaming kya hai?
+LLM jawab **ek-ek token** karke banata hai (Chapter 02 mein detail mein). Bina streaming ke server poora jawab banne tak rukta hai, phir ek saath bhejta hai. Streaming mein har tukda (**chunk**) bante hi bhej diya jaata hai.
+
+```mermaid
+flowchart LR
+    subgraph N["❌ Bina streaming"]
+        direction LR
+        N1["LLM poora jawab banata hai<br/>(2 sec wait 😴)"] --> N2["Ek saath poora text"]
+    end
+    subgraph S["✅ Streaming"]
+        direction LR
+        S1["chunk: 'Namaste'"] --> S2["chunk: ' Aditya'"] --> S3["chunk: ','"] --> S4["... aate rehte hain"]
+    end
+```
+
+**Humara test result:**
+| | Time |
+|---|---|
+| Pehla chunk screen pe | **0.16 sec** ⚡ |
+| Poora jawab | 2.06 sec |
+
+Total time **utna hi** hai. Par user ko 0.16 sec mein jawab dikhne lagta hai, isliye app **fast lagti hai**.
+
+> 💬 **Hinglish:** Bina streaming = poora khana ban jaaye tab ek saath thali aaye. Streaming = jaise-jaise roti banti jaaye, garam-garam plate mein aati rahe. Kul time same, par wait kam lagta hai.
+>
+> 📺 **YouTube example:** Poori video download hone ka wait nahi karte, video turant chalu ho jaati hai aur baaki peeche load hota rehta hai. Isi ko "streaming" kehte hain. AI ka jawab bhi aise hi aata hai.
+
+**Asli chunks aise dikhte hain** (har chunk ko alag line pe print karke dekha):
+```
+[0.04s] chunk 1: 'Nam'
+[0.06s] chunk 2: 'aste'
+[0.09s] chunk 3: ' Ad'
+[0.11s] chunk 4: 'ity'
+[0.14s] chunk 5: 'a'
+[0.16s] chunk 6: '!'
+...
+[1.33s] chunk 50: '?'
+```
+Dhyan do: chunks **poore words bhi nahi hain** ("Nam" + "aste"). Ye **tokens** hain, jinke baare mein Chapter 02 mein padhenge. Normal `print` (`end=""` ke saath) inhe jod ke ek line bana deta hai: `Namaste Aditya!...`
+
+### Code: Step 5 se kya naya hai
+**1. Request mein `stream=True`:**
+```python
+stream = client.chat.completions.create(model=model, messages=messages, stream=True)
+```
+Ab `response` nahi aata, ek **stream** aati hai: chunks ki line jo ek-ek karke aati hai.
+
+**2. `for` loop se har chunk padho:**
+```python
+reply = ""
+for chunk in stream:
+    piece = chunk.choices[0].delta.content   # ek chhota tukda text (ya None)
+    if piece:
+        print(piece, end="", flush=True)     # same line pe, turant dikhao
+        reply = reply + piece                # tukde jodte jao
+```
+| Cheez | Matlab |
+|---|---|
+| `delta` | "Naya kya aaya". Pehle `message` tha (poora), ab `delta` hai (sirf naya tukda) |
+| `if piece:` | Kuch chunks khaali (`None`) hote hain, unhe skip karo |
+| `end=""` | `print` har baar nayi line na banaye, sab ek line mein aaye |
+| `flush=True` | Text turant screen pe bhejo, ruk ke nahi |
+
+**3. Memory mein poora jawab save:**
+```python
+messages.append({"role": "assistant", "content": reply})
+```
+Tukde jod ke bana poora `reply` hi memory mein jaata hai. Agar ye na karte, to Step 4 wali memory toot jaati.
+
+### 🌍 Real world
+- **ChatGPT, Claude, Gemini**: sab streaming use karte hain, isliye text "type hota" dikhta hai
+- **Voice assistants**: jawab ka pehla hissa aate hi bolna shuru kar dete hain
+- APIs mein isse **"time to first token" (TTFT)** kehte hain, aur companies isse speed ka main number maanti hain
+
+### 🧪 Khud try karo
+- Ek lamba sawal pucho ("Python ke 10 uses batao") aur text ko aate hue dekho
+- `flush=True` hata ke dekho: kabhi-kabhi text atak-atak ke aayega
+
+---
+
+## ✅ Chapter 01 summary: humne kya banaya
+```mermaid
+flowchart LR
+    A["1 · AI ko call"] --> B["2 · Apna sawal"] --> C["3 · Loop + .env"] --> D["4 · Memory"] --> E["5 · System prompt"] --> F["6 · Streaming"]
+    F --> G["🤖 Ek chhota ChatGPT!"]
+```
+| Concept | Ek line mein |
+|---|---|
+| LLM | text lo, aage ka text predict karo |
+| messages, role, content | kaun bola (`system` / `user` / `assistant`) + kya bola |
+| Stateless | LLM kuch yaad nahi rakhta |
+| Context window | ek request mein LLM jo dekh sakta hai; limited, tokens mein naapa jaata hai |
+| Memory | poori chat list har baar bhejna |
+| System prompt | AI ka role/rules, list mein sabse upar |
+| Streaming | jawab chunks mein, turant dikhe |
+
+➡️ **Next: [Chapter 02 - How LLMs Work](../02_how_llms_work/).** Streaming mein jo chunks aaye, woh lagbhag **tokens** hi hain. Ab dekhenge ki token kya hota hai aur LLM ek-ek token kaise predict karta hai.
+
+---
+
 ## Run
 ```bash
-python 01_chat_with_local_ai/step5_system_prompt.py
+python 01_chat_with_local_ai/step6_streaming.py
 ```

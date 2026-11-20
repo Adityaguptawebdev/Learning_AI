@@ -23,14 +23,14 @@ flowchart TD
 | # | Chapter | Kya seekhenge | Status |
 |---|---|---|---|
 | 00 | [Python Basics](00_python_basics/) | variables, list, dict, loops, functions | ✅ |
-| 01 | [Chat with Local AI](01_chat_with_local_ai/) | LLM call, roles, context window, memory, system prompt, streaming | 🟡 5/6 |
+| 01 | [Chat with Local AI](01_chat_with_local_ai/) | LLM call, roles, context window, memory, system prompt, streaming | ✅ |
 | 02 | [How LLMs Work](02_how_llms_work/) | tokens, next-token prediction, temperature, hallucination | ⏳ |
 | 03 | [Prompt Engineering](03_prompt_engineering/) | few-shot, chain-of-thought, JSON output | ⏳ |
 | 04 | [Embeddings](04_embeddings/) | text → numbers (vector), similarity, semantic search | ⏳ |
 | 05 | [Vector Databases](05_vector_databases/) | Chroma, vectors store + search, metadata | ⏳ |
 | 06 | [RAG Basics](06_rag_basics/) | apne documents se AI ko jawab dilwana | ⏳ |
 | 07 | [Advanced RAG](07_advanced_rag/) | chunking, hybrid search, re-ranking, citations | ⏳ |
-| 08 | [Tool Calling](08_tool_calling/) | AI khud functions call kare | ⏳ |
+| 08 | [Tool Calling](08_tool_calling/) | AI khud functions call kare | 🟡 1/2 |
 | 09 | [AI Agents & Harness](09_ai_agents_and_harness/) | agent loop, ReAct, harness kya hota hai | ⏳ |
 | 10 | [MCP](10_mcp/) | AI ko apps se jodne ka standard plug | ⏳ |
 | 11 | [Memory & Storage](11_memory_and_storage/) | permanent memory, chat DB mein save | ⏳ |
@@ -54,5 +54,5 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 open -a Ollama
-python 01_chat_with_local_ai/step5_system_prompt.py
+python 01_chat_with_local_ai/step6_streaming.py
 ```
