@@ -1,4 +1,4 @@
-# 02 - How LLMs Work 🟡
+# 02 - How LLMs Work ✅
 
 🔗 **Pichle chapters se connection:** Chapter 01 mein LLM use kiya, aur streaming mein ajeeb tukde dekhe ("Nam" + "aste"). Chapter 08 mein LLM ne maths mein galti ki. Is chapter mein dekhenge ki **LLM ke andar asal mein kya hota hai**, aur ye sab kyun hua.
 
@@ -6,7 +6,7 @@
 flowchart LR
     S1["Step 1<br/>Tokens"] -->|"agla token kaise chunta hai?"| S2["Step 2<br/>Next-token prediction"]
     S2 -->|"har baar alag jawab kyun?"| S3["Step 3<br/>Temperature"]
-    S3 -->|"confident hoke galat kyun?"| S4["Step 4<br/>Hallucination ⏳"]
+    S3 -->|"confident hoke galat kyun?"| S4["Step 4<br/>Hallucination"]
 ```
 
 ---
@@ -286,8 +286,107 @@ python 02_how_llms_work/step3_temperature.py
 
 **Problem 🤔** Temperature 0 pe bhi model confidently **galat** bola (440,841,693). Model ko pata hi nahi chalta ki woh galat hai. Ye kyun hota hai, aur kaise bachein? → Step 4 (Hallucination)
 
-## Step 4: Hallucination ⏳
-LLM confident hoke galat kyun bolta hai, aur isse kaise bachein.
+## Step 4: Hallucination → [step4_hallucination.py](step4_hallucination.py)
+🔗 **Step 3 ki problem:** temperature 0 pe bhi model confidently **galat** bola, aur use pata bhi nahi chala.
 
-### 🌍 Real world (preview)
-- 2023 mein US ke kuch lawyers ne ChatGPT ke banaye **fake court cases** court mein submit kar diye (hallucination!)
+### 🧠 Concept: hallucination kya hai?
+**Hallucination** = LLM ka **confident hoke galat ya banaya hua** jawab dena: fake facts, fake naam, fake links, galat maths.
+
+**Kyun hota hai?** Ab tak ka sab kuch jodo:
+1. **LLM ke paas facts ki koi "database" nahi hai.** Woh sirf next token predict karta hai (Step 2). Woh "sach" nahi, "sach jaisa lagne wala" text banata hai.
+2. **Woh hamesha kuch na kuch bolta hai.** Har token ka koi na koi chance hota hai, aur "mujhe nahi pata" bolna bhi bas ek aur token choice hai.
+3. **Tokens ka issue** (Step 1): `9.11` model ko `9` + `.` + `11` dikhta hai, aur `11 > 9` lagta hai. (Software versions mein v9.11 sach mein v9.9 ke baad aata hai, isliye training data bhi confuse karta hai.)
+4. **Training cutoff:** Dec 2023 ke baad ki duniya ka use kuch nahi pata. Usse lagta hai ki abhi bhi 2023 hai.
+
+> 💬 **Hinglish:** LLM us dost jaisa hai jo **kabhi "pata nahi" nahi bolta**. Usse kuch bhi poocho, woh itne confidence se jawab dega ki tum maan loge, chahe woh khud bana raha ho.
+
+### 🔍 Part A: hallucination dekhna (temperature 0)
+| Sawal | Model ka jawab | Sach |
+|---|---|---|
+| 🔢 9.11 vs 9.9, bada kaun? | "9.11 is bigger than 9.9." | **9.9** ❌ |
+| 📄 Hindi tokenization pe ek research paper | "Deep Hindi Tokenization using BERT and WordPiece" by Ankit Chaudhary, 2020 | ⚠️ har run mein **alag** paper aur **alag** author mila (Ankit Bhagat 2019, S. K. Singh 2018...) |
+| 🎬 Fake movie "Chai Pe Charcha Express" | "I couldn't find any information..." | ✅ sahi pakda |
+| 🏏 2025 Champions Trophy | "...as it has not yet occurred." | ❌ ho chuki hai (India jeeta). Model ko lagta hai abhi 2023 hai |
+
+**Dhyan do:**
+- **Research papers wala sabse khatarnak hai.** Naam, saal, title sab "asli jaisa" lagta hai. Asli paper hota to har baar **same** aata. Har baar alag aana is baat ka sign hai ki model bana raha hai. **AI ke diye links, papers aur quotes hamesha khud check karo** (Google Scholar).
+- Fake movie model ne pakad li, kyunki naye models ko "pata nahi" bolna sikhaya jaata hai. Par ye **har baar kaam nahi karta**.
+
+### 🛠️ Hallucination se kaise bachein: 3 fixes
+```mermaid
+flowchart TD
+    H["😵 Hallucination"] --> F1["Fix 1: System prompt<br/>'pata nahi to bolo'"]
+    H --> F2["Fix 2: Facts prompt mein do<br/>(RAG ka idea, Ch 06)"]
+    H --> F3["Fix 3: Exact kaam code/tools se<br/>(Ch 08)"]
+    F1 --> R1["⚠️ Thoda help karta hai"]
+    F2 --> R2["✅ Bahut effective"]
+    F3 --> R3["✅ 100% sahi"]
+```
+
+**Part B: Fix 1, system prompt** ("Only answer if you are sure... else say: Mujhe nahi pata")
+```
+🔢 9.11 is bigger than 9.9.        ❌ phir bhi galat
+📄 "An Efficient Hindi Tokenization System..." by S. K. Singh, 2018   ❌ phir bhi bana diya
+```
+**Kaam nahi kiya!** Model ko **pata hi nahi** ki use nahi pata. Jahan woh "confident" feel karta hai, wahan ye prompt bekaar hai.
+
+**Part C: Fix 2, facts prompt mein do**
+```
+Fact: India won the 2025 ICC Champions Trophy...
+Using only the fact above: Who won...?
+🏏 India won the 2025 ICC Champions Trophy cricket final.   ✅
+```
+Sahi fact context window mein ho, to model use padh ke sahi bolta hai. **Yahi RAG ka core idea hai** (Chapter 06): sahi documents dhoondh ke prompt mein daal do.
+
+**Part D: Fix 3, exact kaam code se karwao**
+```
+🔢 Python says bigger number is: 9.9   ✅
+```
+Maths, comparison, dates, current time: ye kaam **code/tools** ka hai, LLM ka nahi (Chapter 08).
+
+### 📝 Code
+```python
+def ask(question, system_prompt=None):    # system_prompt optional hai (default None)
+    messages = []
+    if system_prompt:                     # diya hai to hi system message daalo
+        messages.append({"role": "system", "content": system_prompt})
+    ...
+```
+- `system_prompt=None` = **default value**: function call karte waqt ye input dena zaroori nahi
+- `temperature=0` taaki har run mein same result aaye (Step 3)
+
+### 🌍 Real world
+- **2023, US (Mata v. Avianca):** lawyers ne ChatGPT ke banaye **fake court cases** court mein submit kar diye. Judge ne pakda, aur lawyers pe **$5,000 ka fine** laga
+- **2024, Air Canada:** company ke chatbot ne ek customer ko **galat refund policy** bata di. Court ne kaha ki chatbot ki baat company ki zimmedari hai, aur Air Canada ko paise dene pade
+- **2023, Google Bard ka launch demo:** James Webb telescope ke baare mein ek galat fact bol diya. Usi din Google (Alphabet) ke shares girne se lagbhag **$100 billion** ki value doob gayi
+- Isliye companies **RAG + citations** (06, 07), **tools** (08), **guardrails** (14) aur **evals** (13) lagati hain
+
+### 🧪 Khud try karo
+```bash
+python 02_how_llms_work/step4_hallucination.py
+```
+- Model se apne shehar ki **exact** population ya kisi chhote local restaurant ka owner poocho, aur confidence dekho
+- Part C mein `facts` badal ke koi galat fact daalo. Kya model usko bhi maan leta hai? (Hint: haan! RAG mein **sahi documents** dena kitna zaroori hai, ye wahan dikhega)
+
+---
+
+## ✅ Chapter 02 summary
+```mermaid
+flowchart LR
+    A["✂️ Tokens<br/>text → tukde → numbers"] --> B["🎲 Next-token prediction<br/>har token ka chance %"]
+    B --> C["🌡️ Temperature<br/>chances tight / dheela"]
+    C --> D["😵 Hallucination<br/>'sach jaisa' ≠ sach"]
+```
+| Concept | Ek line mein |
+|---|---|
+| Token | text ka tukda. LLM words nahi, tokens (numbers) dekhta hai. 1 token ≈ ¾ English word |
+| Tokenizer | text ko tokens mein todne wala. Hindi ko ~2x tokens lagte hain |
+| Hidden template | roles, cutoff date, tool instructions, sab tokens mein jaate hain |
+| Next-token prediction | LLM ka ek hi kaam: agla token guess karna, baar-baar |
+| Training vs Inference | seekhna (ek baar, mehenga) vs use karna (har request) |
+| Parameters | model ke andar ke "knobs". 3b = 3 billion |
+| Attention / Transformer | pichle tokens mein se important wale pe dhyan dena |
+| Temperature | randomness control karta hai, knowledge nahi. 0 = same, zyada = creative |
+| Hallucination | confident galat jawab. Fix: facts do (RAG), code/tools use karo, khud check karo |
+
+➡️ **Next: [Chapter 03 - Prompt Engineering](../03_prompt_engineering/).** Ab pata hai ki LLM andar se kaise kaam karta hai. Agle chapter mein seekhenge ki **achha prompt** likh ke usse best jawab kaise nikalwayein (examples dena, step-by-step sochwana, JSON output).
