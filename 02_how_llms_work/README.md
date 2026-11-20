@@ -5,7 +5,7 @@
 ```mermaid
 flowchart LR
     S1["Step 1<br/>Tokens"] -->|"agla token kaise chunta hai?"| S2["Step 2<br/>Next-token prediction"]
-    S2 -->|"har baar alag jawab kyun?"| S3["Step 3<br/>Temperature ⏳"]
+    S2 -->|"har baar alag jawab kyun?"| S3["Step 3<br/>Temperature"]
     S3 -->|"confident hoke galat kyun?"| S4["Step 4<br/>Hallucination ⏳"]
 ```
 
@@ -180,8 +180,111 @@ python 02_how_llms_work/step2_next_token.py
 
 **Problem 🤔** Model kabhi top token chunta hai, kabhi 10% wala. Ye **randomness kaun control karta hai?** Kya hum use kam-zyada kar sakte hain? → Step 3
 
-## Step 3: Temperature ⏳
-Same sawal pe har baar alag jawab kyun? Creative vs fixed jawab.
+## Step 3: Temperature → [step3_temperature.py](step3_temperature.py)
+🔗 **Step 2 ki problem:** model kabhi top token chunta hai, kabhi 10% wala. Ye randomness **temperature** control karta hai.
+
+### 🧠 Concept: temperature kya hai?
+**Temperature** = ek setting jo token chunne se pehle **chances ko tight ya dheela** karti hai.
+
+| 🌡️ Temperature | Kya hota hai | Jawab |
+|---|---|---|
+| **0** (thanda) | Hamesha top wala token | Har baar **same**, safe |
+| **~0.7-1** (normal) | Mostly top tokens, thoda variety | Natural, thoda alag |
+| **1.5+** (garam) | Chhote chances bhi bade ho jaate hain | Creative, par **bhatak** sakta hai |
+
+> 💬 **Hinglish:** Temperature = **risk lene ki aadat**. Temperature 0 = hamesha wahi dish order karna jo sabse zyada pasand hai. Temperature 2 = menu mein kuch bhi try kar lena, kabhi mazedaar, kabhi ajeeb.
+
+### 🔍 Part A: temperature chances ko kaise badalta hai
+`"Python is a"` ke baad pehle token ke chances (top 5 options ke andar):
+```
+🌡️ 0.2                      🌡️ 1.0                      🌡️ 2.0
+'high'        99.8% ████    'high'        59.3% ███     'high'        38.7% ██
+'programming'  0.1%         'programming' 15.8% █       'programming' 19.9% █
+'general'      0.0%         'general'     11.6% █       'general'     17.1% █
+'popular'      0.0%         'popular'     11.0% █       'popular'     16.7% █
+'vers'         0.0%         'vers'         2.3%         'vers'         7.7%
+```
+- **Kam temperature** → winner aur bada (99.8%), baaki zero
+- **Zyada temperature** → sab barabar ki taraf, chhote options ko bhi mauka
+
+```mermaid
+flowchart LR
+    P["🧠 Model ke asli chances<br/>high 59% · programming 16% · ..."] --> T{"🌡️ Temperature"}
+    T -- "0.2 (tight)" --> A["high 99.8% → hamesha 'high'"]
+    T -- "2.0 (dheela)" --> B["high 39% · baaki ~17% → kuch bhi aa sakta hai"]
+```
+
+### 🔍 Part B: asli jawab, 3-3 baar
+Prompt: *"Write a one-line slogan for a chai shop."*
+
+**🌡️ 0:** teeno **bilkul same**
+```
+1. "Warming hearts, one cup at a time."
+2. "Warming hearts, one cup at a time."
+3. "Warming hearts, one cup at a time."
+```
+**🌡️ 0.8:** milte-julte, thoda alag
+```
+1. "Warm hearts, one cup at a time."
+2. "Warming hearts and souls, one cup at a time."
+3. "Warming Hearts, One Cup at a Time."
+```
+**🌡️ 1.8:** creative, par instruction se **bhatak gaya** (one-line maanga tha, list de di)
+```
+1. "Elevate Your Day, one sip at a time with Every Cup & Love at [Name] of Chai."
+2. Here's a potential slogan for a chai shop: "Warm Up with the Right Blend!" Alternatively, ...
+3. "Steeped in tradition, served with warmth and delight."
+```
+
+### ⚠️ Sabse important lesson: same ≠ sahi
+Chapter 08 wala maths sawal **temperature 0** pe 3 baar poocha:
+```
+temp 0: 440,841,693
+temp 0: 440,841,693
+temp 0: 440,841,693
+correct: 443,272,593   ❌
+```
+Temperature 0 ne jawab ko **consistent** bana diya, par **sahi nahi**. Model ka sabse "pasandeeda" token bhi galat ho sakta hai. Temperature randomness control karta hai, **knowledge nahi**. Sahi jawab ke liye tools (08) ya data (RAG, 06) chahiye.
+
+### 🎯 Kab kaunsa temperature?
+| Kaam | Temperature |
+|---|---|
+| Facts, maths, code, JSON nikalna, tool calling, evals | **0 - 0.2** |
+| Normal chat, explanations | **0.5 - 0.8** |
+| Brainstorming, stories, slogans, naam sochna | **0.9 - 1.2** |
+| 1.5+ | Rarely, jawab bekaabu ho jaata hai |
+
+**`top_p`** (ek aur setting): sirf top tokens mein se chuno jinka total chance p tak ho. `top_p=0.9` = sabse kam chance wale tokens hata do. Usually **temperature ya top_p, ek hi badlo**.
+
+### 📝 Code
+```python
+response = client.chat.completions.create(
+    model=model,
+    messages=[...],
+    temperature=0.8,   # NEW - 0 = fixed, zyada = random
+)
+```
+Part A mein temperature ka formula khud lagaya: `chance = exp(logprob / temperature)`. Temperature se **divide** karte hain, isliye chhota temperature farak ko bada kar deta hai aur bada temperature use chhota.
+
+Naya Python:
+- `[math.exp(...) for c in candidates]` = **list comprehension**: ek line mein `for` loop chala ke nayi list banana
+- `for c, w in zip(candidates, weights)` = do lists ko saath-saath chalana (pehla-pehla, doosra-doosra...)
+- `for attempt in range(3)` = loop 3 baar chalao (0, 1, 2)
+
+### 🌍 Real world
+- **Customer support, data extraction, coding tools** temperature kam rakhte hain, kyunki har baar same aur predictable jawab chahiye
+- **Creative tools** (story/slogan/marketing copy generators) zyada rakhte hain
+- **ChatGPT ka "Regenerate" button**: temperature > 0 hai, isliye har baar naya jawab aata hai
+- **Evals (Chapter 13)** mein temperature 0 rakhte hain, taaki test results repeat ho sakein
+
+### 🧪 Khud try karo
+```bash
+python 02_how_llms_work/step3_temperature.py
+```
+- Part B ka prompt badlo: `"Suggest a name for my cat."` 0 vs 1.2 pe
+- Chapter 01 ke chatbot (`step6_streaming.py`) mein `temperature=0` add karo, aur ek hi sawal 2 baar poocho
+
+**Problem 🤔** Temperature 0 pe bhi model confidently **galat** bola (440,841,693). Model ko pata hi nahi chalta ki woh galat hai. Ye kyun hota hai, aur kaise bachein? → Step 4 (Hallucination)
 
 ## Step 4: Hallucination ⏳
 LLM confident hoke galat kyun bolta hai, aur isse kaise bachein.
