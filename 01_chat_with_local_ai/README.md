@@ -7,7 +7,7 @@ flowchart LR
     S1["Step 1<br/>First AI call"] -->|"prompt is fixed in code"| S2["Step 2<br/>User input"]
     S2 -->|"only 1 question"| S3["Step 3<br/>Chat loop"]
     S3 -->|"AI forgets"| S4["Step 4<br/>Memory"]
-    S4 -->|"no personality"| S5["Step 5<br/>System prompt ⏳"]
+    S4 -->|"no personality"| S5["Step 5<br/>System prompt"]
     S5 -->|"reply comes late, all at once"| S6["Step 6<br/>Streaming ⏳"]
 ```
 
@@ -175,7 +175,64 @@ flowchart TD
 
 ---
 
+## Step 5: System prompt → [step5_system_prompt.py](step5_system_prompt.py)
+🔗 **Step 4 ki problem fix:** AI ko ek fixed **role, rules aur personality** dena, jo poori chat mein bani rahe.
+
+### Concept: system prompt kya hai?
+**System prompt** = `role: "system"` wala message. Ye AI ke liye **instructions** hain, sawal nahi. Isme hum batate hain:
+- **Kaun ho** (role): "You are a Python teacher"
+- **Kaise bolna hai** (style): "Hinglish mein, short"
+- **Kya karna hai / kya nahi** (rules): "Har jawab mein ek example do"
+
+> 💬 **Hinglish:** System prompt = naye employee ko pehle din diya gaya **job description**. Customer (user) kuch bhi puche, employee usi job description ke hisaab se jawab dega.
+
+### Ye context window mein kahan jaata hai?
+Sabse **upar**, sirf ek baar. Uske neeche Step 4 wali memory (user + assistant messages) badhti rehti hai.
+```mermaid
+flowchart TD
+    subgraph CW["🪟 Context window (har request mein)"]
+        direction TB
+        S["⚙️ system: You are a Python teacher... (hamesha top pe)"]
+        U1["🧑 user: What is a list?"]
+        A1["🤖 assistant: List ek collection hai..."]
+        U2["🧑 user: And what is a dictionary?"]
+        S --> U1 --> A1 --> U2
+    end
+```
+
+### Code: Step 4 se sirf 2 cheezein nayi
+```python
+system_prompt = """You are a friendly Python teacher for beginners.
+Always reply in Hinglish (Hindi written in English letters).
+Keep every answer under 3 sentences and give one tiny example."""
+
+messages = [
+    {"role": "system", "content": system_prompt},   # list ab khaali nahi, system se shuru hoti hai
+]
+```
+Baaki code (loop + memory) bilkul Step 4 jaisa hai. `"""...."""` = Python mein multi-line string.
+
+> 💬 **Hinglish:** System message hum sirf **ek baar** list mein daalte hain, loop ke bahar. Kyunki list poori ki poori har baar bheji jaati hai (Step 4), system prompt apne aap har request mein chala jaata hai.
+
+### Dhyan dene wali baat ⚠️
+- Chhote models (jaise `llama3.2:3b`) rules **poori tarah follow nahi karte**. Test mein "3 sentences" bola tha, par jawab thoda lamba aaya. Bade models (GPT, Claude) better follow karte hain.
+- System prompt bhi **tokens** leta hai, aur har request mein jaata hai. Isliye use short aur clear rakho.
+
+### 🌍 Real world
+- **ChatGPT "Custom Instructions" / Custom GPTs**: tum jo instructions likhte ho, woh andar se system prompt hi banti hain
+- **Company support bots**: "Tum XYZ Bank ke assistant ho. Sirf banking ke sawalon ka jawab do. Polite raho." Ye sab system prompt mein hota hai
+- **Claude Code / Cursor** jaise coding tools ka bhi ek bada system prompt hota hai jo batata hai ki tools kaise use karne hain
+
+### 🧪 Khud try karo
+`system_prompt` badal ke dekho:
+- `"You are a pirate. Talk like a pirate."` 🏴‍☠️
+- `"Only answer questions about cooking. For anything else, say 'Main sirf cooking ke baare mein bata sakta hoon.'"`
+
+**Problem 🤔** Jawab tab tak dikhta hi nahi jab tak **poora** ban na jaaye. Lamba jawab ho to kaafi der khaali screen dikhti hai. → Step 6 (Streaming): jawab word-by-word aayega, ChatGPT ki tarah.
+
+---
+
 ## Run
 ```bash
-python 01_chat_with_local_ai/step4_memory.py
+python 01_chat_with_local_ai/step5_system_prompt.py
 ```

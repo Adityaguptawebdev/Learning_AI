@@ -23,7 +23,7 @@ flowchart TD
 | # | Chapter | Kya seekhenge | Status |
 |---|---|---|---|
 | 00 | [Python Basics](00_python_basics/) | variables, list, dict, loops, functions | ✅ |
-| 01 | [Chat with Local AI](01_chat_with_local_ai/) | LLM call, roles, context window, memory, system prompt, streaming | 🟡 4/6 |
+| 01 | [Chat with Local AI](01_chat_with_local_ai/) | LLM call, roles, context window, memory, system prompt, streaming | 🟡 5/6 |
 | 02 | [How LLMs Work](02_how_llms_work/) | tokens, next-token prediction, temperature, hallucination | ⏳ |
 | 03 | [Prompt Engineering](03_prompt_engineering/) | few-shot, chain-of-thought, JSON output | ⏳ |
 | 04 | [Embeddings](04_embeddings/) | text → numbers (vector), similarity, semantic search | ⏳ |
@@ -54,5 +54,5 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 open -a Ollama
-python 01_chat_with_local_ai/step4_memory.py
+python 01_chat_with_local_ai/step5_system_prompt.py
 ```
