@@ -25,7 +25,7 @@ flowchart TD
 | 00 | [Python Basics](00_python_basics/) | variables, list, dict, loops, functions | ✅ |
 | 01 | [Chat with Local AI](01_chat_with_local_ai/) | LLM call, roles, context window, memory, system prompt, streaming | ✅ |
 | 02 | [How LLMs Work](02_how_llms_work/) | tokens, next-token prediction, temperature, hallucination | ✅ |
-| 03 | [Prompt Engineering](03_prompt_engineering/) | few-shot, chain-of-thought, JSON output | 🟡 1/4 |
+| 03 | [Prompt Engineering](03_prompt_engineering/) | few-shot, chain-of-thought, JSON output | 🟡 2/4 |
 | 04 | [Embeddings](04_embeddings/) | text → numbers (vector), similarity, semantic search | ⏳ |
 | 05 | [Vector Databases](05_vector_databases/) | Chroma, vectors store + search, metadata | ⏳ |
 | 06 | [RAG Basics](06_rag_basics/) | apne documents se AI ko jawab dilwana | ⏳ |
